@@ -1,7 +1,8 @@
 -module(chapter3).
 
 -export([index/2,g/1,even/1,merge/2,ex_sum/1,ex_sum_ext/2,ex_list/1,ex_rvlist/1,
-            ex_print_all/1,ex_filter/2,ex_reverse/1,ex_concatenate/1,ex_flatten/1]).
+            ex_print_all/1,ex_filter/2,ex_reverse/1,ex_concatenate/1,ex_flatten/1,
+            ex_quicksort/1,ex_merge_sort/1]).
 
 %Chapter examples
 index(0,[X|_]) -> X;
@@ -59,13 +60,59 @@ ex_concatenate(Array) -> ex_concatenate_add(Array,[]).
 
 ex_concatenate_add([],List) -> List;
 ex_concatenate_add([[H2 | T2]|T],List) ->
-    ex_concatenate_add(T,[ex_concatenate_add(T2,[H2 | List]) | List]);
-ex_concatenate_add([H|T],List) -> ex_concatenate_add(T,[H | List]).
+    %io:format("Find array of array H = ~p T = ~p~n",[H2,T2]),
+    List_add = ex_concatenate_add([H2 | T2],[]),
+    %io:format("create list = ~p~n",[List_add]),
+    ex_concatenate_add(T, List ++ List_add);
+ex_concatenate_add([[]|T],List) ->
+    ex_concatenate_add(T,List);
+ex_concatenate_add([H|T],List) ->
+    %io:format("Find array H = ~p T = ~p~n",[H,T]),
+    ex_concatenate_add(T,List ++ [H]).
 
 ex_flatten([]) -> [];
-ex_flatten([[H2 | T2] | T]) ->
-    ex_flatten([ex_concatenate([H2 | T2]) | T]);
-ex_flatten([H | T]) -> [H | ex_flatten(T)].
+ex_flatten(Array) -> ex_concatenate(Array).
+
+% Ex.3-6
+ex_quicksort([]) -> [];
+ex_quicksort([H | T]) -> ex_quicksort_help(T,H,[],[]).
+
+ex_quicksort_help([],Pivot,Smaller,Others) when Smaller == [] -> Smaller ++ [Pivot] ++ Others;
+ex_quicksort_help([],Pivot,Smaller,Others) ->
+    Slist = ex_quicksort(Smaller),
+    Olist = ex_quicksort(Others),
+    Slist ++ [Pivot] ++ Olist;
+ex_quicksort_help([H | T],Pivot,Smaller,Others) when H < Pivot ->
+    ex_quicksort_help(T,Pivot,[H | Smaller],Others);
+ex_quicksort_help([H | T],Pivot,Smaller,Others) ->
+    ex_quicksort_help(T,Pivot,Smaller,[H | Others]).
+
+ex_merge_sort([]) -> [];
+ex_merge_sort(Array) when length(Array) > 1 ->
+    ArrayLen = length(Array),
+    ArrayHalfLen = ArrayLen div 2 + ArrayLen rem 2,
+    FirstPart = lists:sublist(Array,1,ArrayHalfLen),
+    SecondPart = lists:sublist(Array,1 + ArrayHalfLen,ArrayLen - ArrayHalfLen),
+    FirstPartSorted = ex_merge_sort(FirstPart),
+    SecondPartSorted = ex_merge_sort(SecondPart),
+    %io:format("First = ~p Second = ~p~n",[FirstPart,SecondPart]),
+    %io:format("First sorted = ~p Second sorted = ~p~n",[FirstPartSorted,SecondPartSorted]),
+    Result = ex_merge_sort_help(FirstPartSorted,SecondPartSorted,[]),
+    %io:format("Sort result = ~p~n",[Result]),
+    Result;
+ex_merge_sort(Array) -> Array.
+
+ex_merge_sort_help([],[],List) -> List;
+ex_merge_sort_help([],Array,List) -> lists:reverse(List) ++ Array;
+ex_merge_sort_help(Array,[],List) -> lists:reverse(List) ++ Array;
+ex_merge_sort_help([H1 | T1],[H2 | T2], List)  when H2 < H1 ->
+    %io:format("add small -  ~p vs ~p~n",[H2,H1]),
+    ex_merge_sort_help([H1 | T1],T2,[H2 | List]);
+ex_merge_sort_help([H1 | T1],[H2 | T2], List) ->
+    %io:format("add other -  ~p vs ~p~n",[H1,H2]),
+    ex_merge_sort_help(T1,[H2 | T2],[H1 | List]).
+
+
 
 
 

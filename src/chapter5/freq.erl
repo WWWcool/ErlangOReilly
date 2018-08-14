@@ -27,17 +27,29 @@ call(Message) ->
 
 %% The Main Loop
 loop(Frequencies) ->
+    {_, Allocated} = Frequencies,
+    ListLen = length(Allocated),
     receive
         {request, Pid, allocate} ->
-            {NewFrequencies, Reply} = allocate(Frequencies, Pid),
+            Count = check(Frequencies, Pid, 0),
+            if Count < 3 ->
+                    {NewFrequencies, Reply} = allocate(Frequencies, Pid),
+                    reply(Pid, Reply),
+                    loop(NewFrequencies);
+                true ->
+                    reply(Pid, max_number_of_allocations),
+                    loop(Frequencies)
+            end;
+        {request, Pid, {deallocate, Freq}} ->
+            {NewFrequencies, Reply} = deallocate(Frequencies, Freq, Pid),
             reply(Pid, Reply),
             loop(NewFrequencies);
-        {request, Pid , {deallocate, Freq}} ->
-            NewFrequencies = deallocate(Frequencies, Freq),
-            reply(Pid, ok),
-            loop(NewFrequencies);
-        {request, Pid, stop} ->
-            reply(Pid, ok) end.
+        {request, Pid, stop} when ListLen == 0 ->
+            reply(Pid, ok);
+        {request, Pid, _} ->
+            reply(Pid, not_all_freq_deallocated),
+            loop(Frequencies)
+    end.
 
 reply(Pid, Reply) -> Pid ! {reply, Reply}.
 
@@ -47,8 +59,26 @@ allocate({[], Allocated}, _Pid) ->
 allocate({[Freq|Free], Allocated}, Pid) ->
     {{Free, [{Freq, Pid}|Allocated]},{ok, Freq}}.
 
-deallocate({Free, Allocated}, Freq) ->
-    NewAllocated=lists:keydelete(Freq, 1, Allocated),
-    {[Freq|Free], NewAllocated}.
+check({_, []}, _, Count) -> Count;
+check({Free, [{_, LocPid} | Allocated]}, Pid, Count) when LocPid == Pid ->
+    check({Free, Allocated}, Pid, Count + 1);
+check({Free, [_| Allocated]}, Pid, Count) ->
+    check({Free, Allocated}, Pid, Count).
+
+deallocate({Free, Allocated}, Freq, Pid) ->
+    {NewFree, NewAllocated} = deallocate_help(Free, [], Allocated, Freq, Pid),
+    if length(Allocated) == length(NewAllocated) ->
+            {{Free, Allocated}, {error, bad_arg}};
+        true -> {{NewFree, NewAllocated}, {ok, done}}
+    end.
+
+deallocate_help(Free, Allocated, [], _, _) -> {Free, Allocated};
+deallocate_help(Free, Allocated, [{Freq, Pid}| OldAllocated], Freq, Pid) ->
+    {[Freq | Free], Allocated ++ OldAllocated};
+deallocate_help(Free, Allocated, [H | OldAllocated], Freq, Pid) ->
+    deallocate_help(Free, [H | Allocated], OldAllocated, Freq, Pid).
+
+
+
 
 

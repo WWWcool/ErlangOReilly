@@ -4,7 +4,7 @@
 
 init(Count) -> Count.
 
-terminate(Count) -> {count, Count}.
+terminate(Count) -> Count.
 
 handle_event({raise_alarm, Id, Alarm}, Count) ->
     print(alarm, Id, Alarm, Count),

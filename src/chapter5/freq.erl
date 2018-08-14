@@ -31,7 +31,7 @@ loop(Frequencies) ->
     ListLen = length(Allocated),
     receive
         {request, Pid, allocate} ->
-            Count = check(Frequencies,Pid,0),
+            Count = check(Frequencies, Pid, 0),
             if Count < 3 ->
                     {NewFrequencies, Reply} = allocate(Frequencies, Pid),
                     reply(Pid, Reply),
@@ -59,24 +59,24 @@ allocate({[], Allocated}, _Pid) ->
 allocate({[Freq|Free], Allocated}, Pid) ->
     {{Free, [{Freq, Pid}|Allocated]},{ok, Freq}}.
 
-check({_,[]},_,Count) -> Count;
-check({Free,[{_,LocPid}|Allocated]},Pid, Count) when LocPid == Pid ->
-    check({Free,Allocated},Pid,Count + 1);
-check({Free,[_|Allocated]},Pid, Count) ->
-    check({Free,Allocated},Pid,Count).
+check({_, []}, _, Count) -> Count;
+check({Free, [{_, LocPid} | Allocated]}, Pid, Count) when LocPid == Pid ->
+    check({Free, Allocated}, Pid, Count + 1);
+check({Free, [_| Allocated]}, Pid, Count) ->
+    check({Free, Allocated}, Pid, Count).
 
-deallocate({Free,Allocated}, Freq, Pid) ->
-    {NewFree,NewAllocated} = deallocate_help(Free,[],Allocated,Freq,Pid),
+deallocate({Free, Allocated}, Freq, Pid) ->
+    {NewFree, NewAllocated} = deallocate_help(Free, [], Allocated, Freq, Pid),
     if length(Allocated) == length(NewAllocated) ->
-            {{Free,Allocated},{error, bad_arg}};
-        true -> {{NewFree,NewAllocated},{ok, done}}
+            {{Free, Allocated}, {error, bad_arg}};
+        true -> {{NewFree, NewAllocated}, {ok, done}}
     end.
 
-deallocate_help(Free,Allocated,[],_,_) -> {Free,Allocated};
-deallocate_help(Free,Allocated,[{Freq, Pid}| OldAllocated],Freq,Pid) ->
-    {[Freq | Free],Allocated ++ OldAllocated};
-deallocate_help(Free,Allocated,[H | OldAllocated],Freq,Pid) ->
-    deallocate_help(Free,[H | Allocated],OldAllocated,Freq,Pid).
+deallocate_help(Free, Allocated, [], _, _) -> {Free, Allocated};
+deallocate_help(Free, Allocated, [{Freq, Pid}| OldAllocated], Freq, Pid) ->
+    {[Freq | Free], Allocated ++ OldAllocated};
+deallocate_help(Free, Allocated, [H | OldAllocated], Freq, Pid) ->
+    deallocate_help(Free, [H | Allocated], OldAllocated, Freq, Pid).
 
 
 
